@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public enum JellyTypes{Red,Blue,Green}
 public enum GameState{Stop, Action, Verify}
+//public enum Directio
 
 public class GameManager : MonoBehaviour {
 
@@ -33,9 +34,10 @@ public class GameManager : MonoBehaviour {
     public GameState currentState;                                      //Current State of the game
 
     private const int maxRow = 10;
-
+    private const int maxColumn = 6;
     public SecArray[] jellyArray = new SecArray[maxRow];
-
+    private int[,] checkingArray = new int[maxColumn,maxRow];
+    private bool[,] visitedArray = new bool[maxColumn,maxRow];
     private ArrayList jellyArrayList;
     private ArrayList matchesArrayList;
   
@@ -44,18 +46,13 @@ public class GameManager : MonoBehaviour {
     void Awake()
     {
         instance = this;
-        //DontDestroyOnLoad(gameObject);
+        ClearCheckingArray();
     }
         
-
     void Start () {
         SpawnJellyWave(3,8);
         currentState = GameState.Action;
-    }
-
-    void Update()
-    {
-        
+        //CheckCombine(0,0,0,0,0);
     }
 
     private void SpawnJellyWave(int totalType, int juiceQuota)
@@ -138,7 +135,7 @@ public class GameManager : MonoBehaviour {
         }
         int topRow = FindSpawnJellyPositionY(step);
         Jelly topJellp = jellyArray[topRow].Column[step];
-        juice.ActivateMovement(topJellp.transform.position.y);
+        juice.ActivateMovement(topJellp.transform.position.y, hasPower);
         jellyArray[topRow + 1].Column[step] = juice.AddJelly((int)type, step, topRow + 1, hasPower);
     }
 
@@ -154,6 +151,317 @@ public class GameManager : MonoBehaviour {
     {
         jellyArray[_rowIndex].Column[_columnIndex] = c;
     }
+
+    void ClearCheckingArray()
+    {
+        for (int x = 0; x < maxColumn; x++) {
+            for (int y = 0; y < maxRow; y++) {
+                checkingArray[x,y] = 0;
+                visitedArray[x,y] = false;
+            }
+        }
+    }
+
+    public void UpdateBoard(int collumn, int row, int type)
+    {
+        ClearCheckingArray();
+        CheckChain(collumn,row,type);
+        Splash(type);
+        RemoveChain(type);
+        //CombineJellies();
+    }
+
+    void CheckChain(int collumn, int row, int type)
+    {
+        //set first one to be visited and put into the chain
+        if(!visitedArray[collumn,row])
+        {
+            visitedArray[collumn,row] = true;
+            checkingArray[collumn,row] = 1;
+            print("First--- X: " + collumn + " Y: " + row);
+        }
+
+        if(collumn>0)
+        {
+            bool same = false;
+            int newX = collumn - 1;
+            if(jellyArray[row].Column[newX]!=null)
+            {
+                // if "Left" hasnt been visited
+                if(!visitedArray[newX,row])
+                {
+                    //set "visited"
+                    visitedArray[newX,row] = true;
+                    if(jellyArray[row].Column[newX].type == type)
+                    {
+                        if(checkingArray[newX,row]==0)
+                        {
+                            same = true;
+
+                            //put into chain array
+                            checkingArray[newX,row] = jellyArray[row].Column[newX].GetSplashRange();
+                            //search next chain recursively
+                            CheckChain(newX, row, type);
+                        }
+                    }
+                    print("X = " + newX + " Y = " + row + " Same: " + same);
+                }
+            }
+        }
+
+        if(collumn<(maxColumn-1))
+        {
+            bool same = false;
+            int newX = collumn + 1;
+            if(jellyArray[row].Column[newX]!=null)
+            {
+                // if "Right" hasnt been visited
+                if(!visitedArray[newX,row])
+                {
+                    //set "visited"
+                    visitedArray[newX,row] = true;
+                    if(jellyArray[row].Column[newX].type == type)
+                    {
+                        same = true;
+                        if(checkingArray[newX,row]==0)
+                        {
+                            
+                            //print("X = " + newX + " Y = " + row);
+                            //put into chain array
+                            checkingArray[newX,row] = jellyArray[row].Column[newX].GetSplashRange();
+                            //search next chain recursively
+                            CheckChain(newX, row, type);
+                        }
+                    }
+                    print("X = " + newX + " Y = " + row + " Same: " + same);
+                }
+            }
+        }
+
+        if(row > 0)
+        {
+            bool same = false;
+            int newY = row - 1;
+
+            if(jellyArray[newY].Column[collumn]!=null)
+            {
+                // if "Down" hasnt been visited
+                if(!visitedArray[collumn,newY])
+                {
+                    //set "visited"
+                    visitedArray[collumn,newY] = true;
+                    if(jellyArray[newY].Column[collumn].type == type)
+                    {
+                        if(checkingArray[collumn,newY]==0)
+                        {
+                            same = true;
+
+                            //put into chain array
+                            checkingArray[collumn,newY] = jellyArray[newY].Column[collumn].GetSplashRange();
+                            //search next chain recursively
+                            CheckChain(collumn, newY, type);
+                        }
+                    }
+                    print("X = " + collumn + " Y = " + newY  + " Same: " + same);
+                }
+            }
+        }
+
+        if(row < (maxRow-1))
+        {
+            bool same = false;
+            int newY = row + 1;
+
+            if(jellyArray[newY].Column[collumn]!=null)
+            {
+                // if "Down" hasnt been visited
+                if(!visitedArray[collumn,newY])
+                {
+                    //set "visited"
+                    visitedArray[collumn,newY] = true;
+                    if(jellyArray[newY].Column[collumn].type == type)
+                    {
+                        if(checkingArray[collumn,newY]==0)
+                        {
+                            same = true;
+                            //print("X = " + collumn + " Y = " + newY);
+                            //put into chain array
+                            checkingArray[collumn,newY] = jellyArray[newY].Column[collumn].GetSplashRange();
+                            //search next chain recursively
+                            CheckChain(collumn, newY, type);
+                        }
+                    }
+                    print("X = " + collumn + " Y = " + newY  + " Same: " + same);
+                }
+            }
+        }
+        
+
+    }
+
+    void RemoveChain(int type)
+    {
+        int count = 0;
+        for (int x = 0; x < maxColumn; x++) {
+            for (int y = 0; y < maxRow; y++) {
+                if(checkingArray[x,y]>0)
+                {
+                    count++;
+                }
+            }
+        }
+        if(count<=1)
+            print("no chain");
+        else
+        {
+            for (int x = 0; x < maxColumn; x++) {
+                for (int y = 0; y < maxRow; y++) {
+                    if(checkingArray[x,y]>0)
+                    {
+                        jellyArray[y].Column[x].DisposeJelly();
+                        jellyArray[y].Column[x] = null;
+                    }
+                }
+            }
+            print("has chain");
+        }
+    }
+
+    void Splash(int type)
+    {
+        int newX = 0;
+        int newY = 0;
+        bool hasPower = false;
+        int width = 0;
+        int height = 0;
+        for (int x = 0; x < maxColumn; x++) {
+            for (int y = 0; y < maxRow; y++) {
+                if(checkingArray[x,y]>0)
+                {
+                    if(x>0)
+                    {
+                        newX = x-1;
+                        newY = y;
+                        SplashAdjacentJelly(newX,newY,hasPower,width,height,type);
+                    }
+                    if(x<(maxColumn-1))
+                    {
+                        newX = x+1;
+                        newY = y;
+                        SplashAdjacentJelly(newX,newY,hasPower,width,height,type);
+                    }
+                    if(y>0)
+                    {
+                        newX = x;
+                        newY = y-1;
+                        SplashAdjacentJelly(newX,newY,hasPower,width,height,type);
+                    }
+                    if(y<(maxRow-1))
+                    {
+                        newX = x;
+                        newY = y+1;
+                        SplashAdjacentJelly(newX,newY,hasPower,width,height,type);
+                    }
+                }
+            }
+        }
+    }
+
+    void SplashAdjacentJelly(int newX, int newY, bool hasPower, int width, int height, int type)
+    {
+        if(jellyArray[newY].Column[newX]!=null)
+        {
+            if(jellyArray[newY].Column[newX].type != type)
+            {
+                hasPower = jellyArray[newY].Column[newX].hasPower;
+                width = jellyArray[newY].Column[newX].width;
+                height = jellyArray[newY].Column[newX].height;
+                Jelly obj = AddJelly(type, newY, newX, width, height,hasPower);
+
+                SetJelly(newY,newX,obj);
+            }
+        }
+    }
+
+
+    void CombineJellies()
+    {
+        int type = 0;
+        ClearCheckingArray();
+        for (int x = 0; x < maxColumn; x++) {
+            for (int y = 0; y < maxRow; y++) {
+                if(!visitedArray[x,y] && jellyArray[y].Column[x]!=null)
+                {
+                    type = jellyArray[y].Column[x].type;
+                    CheckCombine(x,y,type,0,0);
+                }
+            }
+        }
+    }
+
+    void CheckCombine(int column, int row, int type, int currentSizeX, int currentSizeY)
+    {
+        print("Column: " + column + " Row: " + row + " SizeX: " + currentSizeX + " SizeY: " + currentSizeY);
+        int sizeCounterX = 0;
+        int newCurrentSizeY = currentSizeY;
+        int newCurrentSizeX = currentSizeX;
+        int newY = row + currentSizeY;
+        for(int x = column; x < maxColumn; x++)
+        {
+            if(!visitedArray[x,newY] && jellyArray[newY].Column[x]!=null)
+            {
+                if(jellyArray[newY].Column[x].type == type)
+                {
+                    sizeCounterX++;
+                }
+                else
+                    break;
+            }
+            else
+                break;
+        }
+
+        if(sizeCounterX>=2)
+        {
+            newCurrentSizeY++;
+            if(newCurrentSizeX==0)
+            {
+                newCurrentSizeX = sizeCounterX;
+            }
+            else
+            {
+                if(sizeCounterX<newCurrentSizeX)
+                    newCurrentSizeX = sizeCounterX;
+            }
+            CheckCombine(column, row, type, newCurrentSizeX, newCurrentSizeY);    
+        }
+        else
+        {
+            if(newCurrentSizeX>=2 && newCurrentSizeY>=2)
+            {
+                for(int x = column; x<newCurrentSizeX; x++)
+                {
+                    for(int y = row; y<newCurrentSizeY; y++)
+                    {
+                        jellyArray[y].Column[x].width = newCurrentSizeX;
+                        jellyArray[y].Column[x].height = newCurrentSizeY;
+                        visitedArray[x,y] = true;
+                        print("(" + x + "," + y + ") = " + newCurrentSizeX + " x " + newCurrentSizeY);
+                    }
+                }
+            }
+        }
+    }
+
+//    bool IsJellyEqualType(int column, int row, int type)
+//    {
+//        if(jellyArray[row].Column[column]!=null)
+//        {
+//            if(jellyArray[row].Column[column].type = type)
+//                return true;
+//        }
+//        return false;
+//    }
 
 //    //选中糖果
 //    public void SelectJelly(Jelly c)

@@ -14,14 +14,12 @@ public class Juice : MonoBehaviour {
     private Jelly myJelly;
     public Jelly MyJelly{get{return myJelly;}}
     private bool hasPower;
-    public bool HasPower{get{return hasPower;}set{hasPower = value;}}
+    //public bool HasPower{get{return hasPower;}set{hasPower = value;}}
 
     void Awake()
     {
         myTransform = transform;
         movingSpeed = 0.5f;
-
-       
     }
 
 	// Update is called once per frame
@@ -41,14 +39,17 @@ public class Juice : MonoBehaviour {
                 if(myJelly.sr_glow)
                     myJelly.sr_glow.enabled = true;
                 canMove = false;
+                if(hasPower)
+                    GameManager.GetInstance.UpdateBoard(column,row,type);
                 Destroy(gameObject);
             }
         }
 	}
 
-    public void ActivateMovement(float topJellyPosY)
+    public void ActivateMovement(float topJellyPosY, bool isPowering)
     {
         targetPos = new Vector3(0,topJellyPosY + yOff, 0);
+        hasPower = isPowering;
         canMove = true;
     }
         
