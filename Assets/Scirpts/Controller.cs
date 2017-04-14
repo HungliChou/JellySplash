@@ -24,6 +24,7 @@ public class Controller : MonoBehaviour {
     public float power_current = 0;
     public float power_max;
     private float power_basicAdd = 5;
+    private float spawnerCD = 0;
 
     public RectTransform juiceSelction;
     public Text powerQuotaText;
@@ -83,13 +84,18 @@ public class Controller : MonoBehaviour {
 
         if(Input.GetKeyDown(KeyCode.R))
         {
-            EnablePowering(true);
+            if(!isPowering)
+                EnablePowering(true);
+            else
+                EnablePowering(false);
         }
 
         if(Input.GetKeyDown(KeyCode.Space))
         {
-            if(jellyJuiceQuota[(int)currentJuice]<=0)
+            if(jellyJuiceQuota[(int)currentJuice]<=0 || spawnerCD!=0)
                 return;
+                
+            spawnerCD = 1;
 
             JellyTypes juice = currentJuice;
             GameManager.GetInstance.SpawnJuice(currentStep,juice, isPowering);
@@ -104,6 +110,15 @@ public class Controller : MonoBehaviour {
             }
             else
                 AddPower(power_basicAdd);
+        }
+
+        if(spawnerCD>0)
+        {
+            spawnerCD -= Time.deltaTime;
+        }
+        else
+        {
+            spawnerCD = 0;
         }
 
         powerQuotaText.text = powerQuota.ToString();

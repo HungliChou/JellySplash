@@ -40,7 +40,9 @@ public class Juice : MonoBehaviour {
                     myJelly.sr_glow.enabled = true;
                 canMove = false;
                 if(hasPower)
-                    GameManager.GetInstance.UpdateBoard(column,row,type);
+                    GameManager.GetInstance.CallUsingPowerJuice(column,row,type);
+                else
+                    GameManager.GetInstance.CallUsingNormalJuice(column,row,type);
                 Destroy(gameObject);
             }
         }

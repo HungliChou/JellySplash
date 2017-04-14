@@ -52,7 +52,7 @@ public class GameManager : MonoBehaviour {
     void Start () {
         SpawnJellyWave(3,8);
         currentState = GameState.Action;
-        //CheckCombine(0,0,0,0,0);
+        //CombineJellies();
     }
 
     private void SpawnJellyWave(int totalType, int juiceQuota)
@@ -97,6 +97,7 @@ public class GameManager : MonoBehaviour {
         obj.type = type;
         obj.gameController = this;
         obj.InitializePosition();
+        obj.ScaleSize();
         obj.hasPower = hasPower;
         if(hasPower)
         {
@@ -134,8 +135,13 @@ public class GameManager : MonoBehaviour {
             glow.transform.localPosition = Vector3.zero;
         }
         int topRow = FindSpawnJellyPositionY(step);
-        Jelly topJellp = jellyArray[topRow].Column[step];
-        juice.ActivateMovement(topJellp.transform.position.y, hasPower);
+        float topRowPosY = 0;
+        if(topRow!=-1)
+        {
+            Jelly topJellp = jellyArray[topRow].Column[step];
+            topRowPosY = topJellp.transform.position.y;
+        }
+        juice.ActivateMovement(topRowPosY, hasPower);
         jellyArray[topRow + 1].Column[step] = juice.AddJelly((int)type, step, topRow + 1, hasPower);
     }
 
@@ -162,13 +168,54 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public void UpdateBoard(int collumn, int row, int type)
+    public void CallUsingPowerJuice(int collumn, int row, int type)
+    {
+        UsingPowerJuice(collumn, row, type);
+    }
+
+    public void CallUsingNormalJuice(int collumn, int row, int type)
+    {
+        UsingNormalJuice(collumn, row, type);
+    }
+    void UsingPowerJuice(int collumn, int row, int type)
     {
         ClearCheckingArray();
         CheckChain(collumn,row,type);
-        Splash(type);
-        RemoveChain(type);
-        //CombineJellies();
+
+        if(CanDoSplash())
+        {
+            Splash(type);
+            RemoveChain(type);
+        }
+
+        CombineJellies();
+    }
+
+    void UsingNormalJuice(int collumn, int row, int type)
+    {
+        //Check left,right,down
+        //if someone has same type and haspower
+        //UsingPowerJuice(newCollumn, newRow, type);
+        //else
+
+        CombineJellies();
+    }
+
+    bool CanDoSplash()
+    {
+        int count = 0;
+        for (int x = 0; x < maxColumn; x++) {
+            for (int y = 0; y < maxRow; y++) {
+                if(checkingArray[x,y]>0)
+                {
+                    count++;
+                }
+            }
+        }
+        if(count<=1)
+            return false;
+        else
+            return true;
     }
 
     void CheckChain(int collumn, int row, int type)
@@ -178,7 +225,7 @@ public class GameManager : MonoBehaviour {
         {
             visitedArray[collumn,row] = true;
             checkingArray[collumn,row] = 1;
-            print("First--- X: " + collumn + " Y: " + row);
+           // print("First--- X: " + collumn + " Y: " + row);
         }
 
         if(collumn>0)
@@ -204,7 +251,7 @@ public class GameManager : MonoBehaviour {
                             CheckChain(newX, row, type);
                         }
                     }
-                    print("X = " + newX + " Y = " + row + " Same: " + same);
+                 //   print("X = " + newX + " Y = " + row + " Same: " + same);
                 }
             }
         }
@@ -233,7 +280,7 @@ public class GameManager : MonoBehaviour {
                             CheckChain(newX, row, type);
                         }
                     }
-                    print("X = " + newX + " Y = " + row + " Same: " + same);
+                  //  print("X = " + newX + " Y = " + row + " Same: " + same);
                 }
             }
         }
@@ -262,7 +309,7 @@ public class GameManager : MonoBehaviour {
                             CheckChain(collumn, newY, type);
                         }
                     }
-                    print("X = " + collumn + " Y = " + newY  + " Same: " + same);
+                   // print("X = " + collumn + " Y = " + newY  + " Same: " + same);
                 }
             }
         }
@@ -291,39 +338,22 @@ public class GameManager : MonoBehaviour {
                             CheckChain(collumn, newY, type);
                         }
                     }
-                    print("X = " + collumn + " Y = " + newY  + " Same: " + same);
+                    //print("X = " + collumn + " Y = " + newY  + " Same: " + same);
                 }
             }
         }
-        
-
     }
 
     void RemoveChain(int type)
     {
-        int count = 0;
         for (int x = 0; x < maxColumn; x++) {
             for (int y = 0; y < maxRow; y++) {
                 if(checkingArray[x,y]>0)
                 {
-                    count++;
+                    jellyArray[y].Column[x].DisposeJelly();
+                    jellyArray[y].Column[x] = null;
                 }
             }
-        }
-        if(count<=1)
-            print("no chain");
-        else
-        {
-            for (int x = 0; x < maxColumn; x++) {
-                for (int y = 0; y < maxRow; y++) {
-                    if(checkingArray[x,y]>0)
-                    {
-                        jellyArray[y].Column[x].DisposeJelly();
-                        jellyArray[y].Column[x] = null;
-                    }
-                }
-            }
-            print("has chain");
         }
     }
 
@@ -371,28 +401,31 @@ public class GameManager : MonoBehaviour {
     {
         if(jellyArray[newY].Column[newX]!=null)
         {
-            if(jellyArray[newY].Column[newX].type != type)
+            if(jellyArray[newY].Column[newX].type != type && jellyArray[newY].Column[newX].width == 1 && jellyArray[newY].Column[newX].height == 1)
             {
                 hasPower = jellyArray[newY].Column[newX].hasPower;
                 width = jellyArray[newY].Column[newX].width;
                 height = jellyArray[newY].Column[newX].height;
+                jellyArray[newY].Column[newX].DisposeJelly();
                 Jelly obj = AddJelly(type, newY, newX, width, height,hasPower);
-
+                print("T:"+type+ " X:"+newX + " Y:"+newY);
                 SetJelly(newY,newX,obj);
             }
         }
     }
 
 
-    void CombineJellies()
+    public void CombineJellies()
     {
         int type = 0;
         ClearCheckingArray();
-        for (int x = 0; x < maxColumn; x++) {
-            for (int y = 0; y < maxRow; y++) {
+
+        for (int y = 0; y < maxRow; y++) {
+            for (int x = 0; x < maxColumn; x++) {
                 if(!visitedArray[x,y] && jellyArray[y].Column[x]!=null)
                 {
                     type = jellyArray[y].Column[x].type;
+                    print("Column: " + x + " Row: " + y + " Type: " + type);
                     CheckCombine(x,y,type,0,0);
                 }
             }
@@ -401,7 +434,6 @@ public class GameManager : MonoBehaviour {
 
     void CheckCombine(int column, int row, int type, int currentSizeX, int currentSizeY)
     {
-        print("Column: " + column + " Row: " + row + " SizeX: " + currentSizeX + " SizeY: " + currentSizeY);
         int sizeCounterX = 0;
         int newCurrentSizeY = currentSizeY;
         int newCurrentSizeX = currentSizeX;
@@ -439,13 +471,14 @@ public class GameManager : MonoBehaviour {
         {
             if(newCurrentSizeX>=2 && newCurrentSizeY>=2)
             {
-                for(int x = column; x<newCurrentSizeX; x++)
+                Jelly obj = AddJelly(type,row,column,newCurrentSizeX,newCurrentSizeY,false);
+                for(int x = column; x<(column + newCurrentSizeX); x++)
                 {
-                    for(int y = row; y<newCurrentSizeY; y++)
+                    for(int y = row; y< (row + newCurrentSizeY); y++)
                     {
-                        jellyArray[y].Column[x].width = newCurrentSizeX;
-                        jellyArray[y].Column[x].height = newCurrentSizeY;
                         visitedArray[x,y] = true;
+                        jellyArray[y].Column[x].DisposeJelly();
+                        jellyArray[y].Column[x] = obj;
                         print("(" + x + "," + y + ") = " + newCurrentSizeX + " x " + newCurrentSizeY);
                     }
                 }

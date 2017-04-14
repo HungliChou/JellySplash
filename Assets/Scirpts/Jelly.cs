@@ -43,4 +43,10 @@ public class Jelly : MonoBehaviour {
         //Destroy(bg.gameObject);
         Destroy(this.gameObject);
     }
+
+    public void ScaleSize()
+    {
+        transform.localScale = new Vector3(transform.localScale.x * width, transform.localScale.y* height, 1);
+        transform.localPosition += new Vector3(0.5f*xOff*(width-1), 0.5f*xOff*(height-1), 0);
+    }
 }
